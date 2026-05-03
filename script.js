@@ -21,18 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ===== Navbar Scroll Effect =====
   const navbar = document.getElementById('navbar');
-  let lastScroll = 0;
-
   window.addEventListener('scroll', () => {
-    const currentScroll = window.pageYOffset;
-
-    if (currentScroll > 50) {
-      navbar.classList.add('scrolled');
-    } else {
-      navbar.classList.remove('scrolled');
-    }
-
-    lastScroll = currentScroll;
+    navbar.classList.toggle('scrolled', window.scrollY > 50);
   });
 
   // ===== Counter Animation =====
@@ -52,37 +42,40 @@ document.addEventListener('DOMContentLoaded', () => {
   statNumbers.forEach(el => counterObserver.observe(el));
 
   function animateCounter(el, target) {
-    let current = 0;
-    const increment = target / 80;
-    const duration = 1500;
-    const stepTime = duration / 80;
+    const duration = 2000;
+    const start = performance.now();
 
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= target) {
-        el.textContent = target;
-        clearInterval(timer);
-      } else {
-        el.textContent = Math.floor(current);
-      }
-    }, stepTime);
+    const update = (now) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.floor(eased * target);
+      if (progress < 1) requestAnimationFrame(update);
+      else el.textContent = target;
+    };
+
+    requestAnimationFrame(update);
   }
 
   // ===== Mobile Hamburger Menu =====
   const hamburger = document.getElementById('hamburger');
   const navLinks = document.querySelector('.nav-links');
+  const navCta = document.querySelector('.nav-cta');
 
   if (hamburger) {
     hamburger.addEventListener('click', () => {
-      navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
-      navLinks.style.flexDirection = 'column';
-      navLinks.style.position = 'absolute';
-      navLinks.style.top = '70px';
-      navLinks.style.left = '0';
-      navLinks.style.width = '100%';
-      navLinks.style.background = 'rgba(10,10,10,0.98)';
-      navLinks.style.padding = '20px';
-      navLinks.style.gap = '20px';
+      hamburger.classList.toggle('active');
+      navLinks.classList.toggle('active');
+      navCta.classList.toggle('active');
+    });
+
+    // Close mobile menu on link click
+    navLinks.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        hamburger.classList.remove('active');
+        navLinks.classList.remove('active');
+        navCta.classList.remove('active');
+      });
     });
   }
 
@@ -102,11 +95,44 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // ===== Interest Selector =====
+  const interestOptions = document.querySelectorAll('.interest-option');
+  const interestValue = document.getElementById('interestValue');
+  const interestFeedback = document.getElementById('interestFeedback');
+
+  interestOptions.forEach(option => {
+    option.addEventListener('click', () => {
+      interestOptions.forEach(opt => opt.classList.remove('selected'));
+      option.classList.add('selected');
+      interestValue.value = option.getAttribute('data-value');
+      interestFeedback.textContent = `Selecionado: ${option.getAttribute('data-value')}`;
+      interestFeedback.classList.add('show');
+    });
+
+    // Hover animation
+    option.addEventListener('mouseenter', () => {
+      if (!option.classList.contains('selected')) {
+        option.style.transform = 'scale(1.05)';
+      }
+    });
+    option.addEventListener('mouseleave', () => {
+      if (!option.classList.contains('selected')) {
+        option.style.transform = 'scale(1)';
+      }
+    });
+  });
+
   // ===== Form Submission =====
   const form = document.getElementById('signupForm');
   if (form) {
     form.addEventListener('submit', (e) => {
       e.preventDefault();
+      if (!interestValue.value) {
+        interestFeedback.textContent = 'Por favor, selecione um interesse';
+        interestFeedback.style.color = '#ff4d00';
+        interestFeedback.classList.add('show');
+        return;
+      }
       const btn = form.querySelector('button[type="submit"]');
       const originalText = btn.textContent;
       btn.textContent = 'Enviado!';
@@ -115,6 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = originalText;
         btn.style.background = '';
         form.reset();
+        interestOptions.forEach(opt => opt.classList.remove('selected'));
+        interestFeedback.classList.remove('show');
       }, 3000);
     });
   }
@@ -127,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sections.forEach(section => {
       const sectionTop = section.offsetTop - 100;
       const sectionHeight = section.clientHeight;
-      if (window.pageYOffset >= sectionTop && window.pageYOffset < sectionTop + sectionHeight) {
+      if (window.scrollY >= sectionTop && window.scrollY < sectionTop + sectionHeight) {
         current = section.getAttribute('id');
       }
     });
@@ -139,4 +167,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // ===== Scroll Progress Bar =====
+  const progressBar = document.createElement('div');
+  progressBar.style.cssText = `
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: linear-gradient(to right, #ff4d00, #ff6a33);
+    z-index: 1001; transition: width 0.1s ease; width: 0%;
+  `;
+  document.body.prepend(progressBar);
+
+  window.addEventListener('scroll', () => {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = (scrollTop / docHeight) * 100;
+    progressBar.style.width = progress + '%';
+  });
+
 });
